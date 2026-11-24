@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBEFD3">
+  <title>跟着念念学英语 · Learn English with Niannian</title>
+  <style>
+    :root { --accent:#B35F3C; --accent-dark:#964B2C; --ink:#4A3A33; --muted:#7A6659; --paper:#FFFBF2; --bg:#FBEFD3; --line:#EBDDBF; --soft:#F6E6C4; --sun:#F2C34B; --book:#E9B93D; }
+    * { box-sizing:border-box; }
+    [hidden] { display:none !important; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:"Trebuchet MS","PingFang SC","Microsoft YaHei",sans-serif; }
+    button, select { font:inherit; }
+    button { -webkit-tap-highlight-color:transparent; cursor:pointer; touch-action:manipulation; border:0; color:inherit; }
+    button:disabled { cursor:default; opacity:.38; }
+    .art-button:disabled, .sentence:disabled { opacity:1; }
+    button:focus-visible, select:focus-visible, summary:focus-visible { outline:3px solid #3F7F8C; outline-offset:5px; }
+    .shell { max-width:1100px; padding:24px 30px 30px; margin:auto; }
+    .rounded { font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; }
+
+    /* ---------- Shelf ---------- */
+    .hero { display:flex; align-items:center; gap:20px; margin:4px 0 26px; }
+    .avatar { width:88px; height:88px; border-radius:50%; object-fit:cover; background:#FFF6E2; border:4px solid #fff; box-shadow:0 0 0 3px var(--sun); flex-shrink:0; }
+    .hero h1 { margin:0; font-size:clamp(28px,4.4vw,40px); line-height:1.15; color:#7A3E22; }
+    .hero .en { margin:4px 0 0; font-size:15px; color:var(--muted); letter-spacing:.02em; }
+    .hero .tagline { display:inline-block; margin:12px 0 0; padding:5px 14px; border-radius:20px; background:var(--soft); font-size:14px; color:#6A4C3B; }
+    .shelf-wrap { background:linear-gradient(#F4E2B9,#EFD9AA); border-radius:26px; padding:34px 18px 0; overflow:hidden; border:1px solid #E5CE9E; box-shadow:inset 0 6px 18px rgba(122,62,34,.08); }
+    .shelf { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
+    .slot { position:relative; padding:0 10px 66px; display:flex; justify-content:center; animation:rise .55s both; animation-delay:calc(var(--i) * 70ms); }
+    .slot::after { content:""; position:absolute; left:0; right:0; bottom:0; height:30px; background:linear-gradient(#D9AE75 0 5px,#BB8A52 5px calc(100% - 3px),#9E7142 calc(100% - 3px)); }
+    .book-card { position:relative; display:block; width:100%; max-width:210px; background:transparent; padding:0; text-align:left; }
+    .book-card.is-lifted { visibility:hidden; }
+    /* The cover is sized in container units so the small shelf book and the big opening book look identical. */
+    .cover { container-type:inline-size; position:relative; display:block; width:100%; aspect-ratio:3/4; border-radius:6px 14px 14px 6px; overflow:hidden; background:var(--book); color:#fff; box-shadow:0 10px 18px rgba(86,50,25,.28), 0 2px 4px rgba(86,50,25,.25); transition:transform .25s ease, box-shadow .25s ease; }
+    .cover::before { content:""; position:absolute; left:0; top:0; bottom:0; width:12px; width:5.5cqw; z-index:3; background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.2) 45%,rgba(0,0,0,.1)); }
+    .cover-art { position:absolute; left:20px; right:9px; top:9px; left:9.5cqw; right:4.3cqw; top:4.3cqw; height:64%; border-radius:8px 10px 10px 8px; overflow:hidden; background:var(--soft); display:block; }
+    .cover-art img { width:100%; height:100%; object-fit:cover; object-position:var(--focus) 50%; display:block; }
+    .cover-count, .cover-star { position:absolute; top:7px; top:3.2cqw; padding:3px 9px; padding:1.4cqw 4.2cqw; border-radius:12px; border-radius:6cqw; font-size:11px; font-size:5.3cqw; line-height:1.4; background:rgba(255,251,242,.92); color:#6A4C3B; }
+    .cover-count { right:7px; right:3.2cqw; }
+    .cover-star { left:7px; left:3.2cqw; background:#FFE9A5; color:#7A4A12; font-weight:700; }
+    .cover-label { position:absolute; left:20px; right:10px; left:9.5cqw; right:4.5cqw; bottom:0; height:30%; display:flex; flex-direction:column; justify-content:center; gap:1px; }
+    .cover-en { font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; font-weight:700; font-size:20px; font-size:11.5cqw; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,.18); }
+    .cover-zh { font-size:14px; font-size:8cqw; opacity:.95; }
+    .book-blurb { display:block; margin-top:12px; text-align:center; font-size:13px; color:#6A4C3B; line-height:1.5; }
+    @media (hover:hover) {
+      .book-card:hover .cover { transform:translateY(-8px) rotate(-1.2deg); box-shadow:0 18px 24px rgba(86,50,25,.3), 0 2px 4px rgba(86,50,25,.25); }
+    }
+    @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+
+    /* ---------- Opening animation ---------- */
+    .stage { position:fixed; inset:0; z-index:50; pointer-events:none; opacity:0; transition:opacity .35s ease; background:radial-gradient(ellipse at 50% 45%,#6B4630 0%,#3E2619 75%); }
+    .stage.is-on { opacity:1; pointer-events:auto; }
+    .fly { position:fixed; perspective:1800px; will-change:transform; }
+    .fly::after { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(0,0,0,.12); z-index:1; }
+    .fly-page { position:absolute; top:0; height:100%; width:50%; background:var(--paper); }
+    .fly-right { left:50%; border-radius:0 14px 14px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,.4); background:linear-gradient(90deg,#EBDDBF,var(--paper) 14%); }
+    .fly-kicker { margin:0 0 10px; font-size:12px; color:var(--muted); }
+    .fly-title { margin:0; font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; font-weight:700; font-size:clamp(22px,3.4vw,34px); line-height:1.15; color:var(--ink); }
+    .fly-zh { margin:6px 0 0; font-size:clamp(16px,2.2vw,22px); color:var(--book); filter:brightness(.78); font-weight:700; }
+    .fly-hint { margin:18px 0 0; font-size:13px; color:var(--muted); }
+    .fly-cover { position:absolute; left:50%; top:0; width:50%; height:100%; transform-origin:left center; transform-style:preserve-3d; transition:transform .95s ease-in-out; z-index:2; }
+    .fly.is-open .fly-cover { transform:rotateY(-180deg); }
+    .fly-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+    .fly-front .cover { width:100%; height:100%; aspect-ratio:auto; box-shadow:none; }
+    .fly-back { transform:rotateY(180deg); border-radius:14px 0 0 14px; background:linear-gradient(270deg,#EBDDBF,var(--paper) 14%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px; box-shadow:0 20px 40px rgba(0,0,0,.4); }
+    .fly-avatar { width:42%; aspect-ratio:1; border-radius:50%; object-fit:cover; border:3px solid #fff; box-shadow:0 0 0 2px var(--sun); }
+    .fly-back-text { margin:0; font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; font-size:clamp(14px,2vw,18px); color:#7A3E22; }
+
+    /* ---------- Reader ---------- */
+    .reader-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; }
+    .back { min-height:46px; display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:16px; background:var(--soft); font-size:15px; }
+    .back:hover { background:#F0DBAE; }
+    .back svg { width:18px; height:18px; }
+    .reader-title { margin:0; font-size:clamp(17px,2.4vw,22px); color:#7A3E22; display:flex; align-items:center; gap:10px; }
+    .reader-title::before { content:""; width:14px; height:14px; border-radius:50%; background:var(--book); box-shadow:0 0 0 3px rgba(255,255,255,.8); }
+    .book { background:var(--paper); border-radius:12px 30px 30px 12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 10px 30px rgba(122,62,34,.08); border-left:10px solid var(--book); }
+    .is-entering .book { animation:book-in .5s ease both; }
+    @keyframes book-in { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
+    .spread { display:grid; grid-template-columns:1.35fr 1fr; min-height:430px; }
+    .art-side { display:flex; align-items:center; justify-content:center; padding:28px 22px; position:relative; }
+    .art-side::after { content:""; position:absolute; right:0; top:24px; bottom:24px; width:1px; background:var(--line); }
+    .art-button { display:block; width:100%; padding:0; background:transparent; border-radius:22px; }
+    .art-button img { width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; display:block; border-radius:22px; background:var(--soft); }
+    .art-button img.turned { animation:page-in .45s ease both; }
+    @keyframes page-in { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+    .words-side { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 25px; }
+    h2.sentence-wrap { margin:0; width:100%; line-height:1.2; }
+    .sentence { padding:0 0 7px; color:var(--ink); background:transparent; font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; font-weight:700; font-size:clamp(28px,3.3vw,42px); line-height:1.2; }
+    .sentence.is-speaking { color:var(--accent); }
+    .invitation { font-size:15px; color:var(--muted); line-height:1.7; margin:14px 0 24px; min-height:24px; }
+    .play { border-radius:32px; padding:15px 26px; min-height:58px; background:var(--accent); color:#fff; font-size:20px; font-weight:700; display:inline-flex; align-items:center; gap:11px; }
+    .play:hover { background:var(--accent-dark); }
+    .play svg { width:24px; height:24px; flex-shrink:0; }
+    .slow { margin-top:15px; min-height:44px; padding:8px 18px; background:transparent; color:var(--accent-dark); font-size:15px; border-bottom:1px solid #D9B79F; }
+    .status { margin:15px 0 0; font-size:12px; color:var(--muted); min-height:38px; line-height:1.65; max-width:270px; }
+    .status.is-error { color:#A33F2E; }
+    .turns { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 25px; border-top:1px solid var(--line); }
+    .turn { min-height:48px; display:inline-flex; align-items:center; gap:10px; background:var(--soft); color:var(--ink); border-radius:16px; padding:11px 17px; font-size:16px; }
+    .turn:hover:not(:disabled) { background:#F0DBAE; }
+    .turn svg { width:18px; height:18px; }
+    .page-count { margin:0; font-size:14px; color:var(--muted); text-align:center; }
+    .progress { width:90px; height:5px; background:#F0E3C6; margin:8px auto 0; border-radius:8px; overflow:hidden; }
+    .progress span { height:100%; background:var(--book); display:block; width:11%; border-radius:8px; transition:width .25s ease; }
+    .parent { margin-top:20px; }
+    .parent summary { cursor:pointer; padding:14px 0; font-size:16px; min-height:48px; width:fit-content; }
+    .parent-content { padding:6px 0 16px; display:grid; grid-template-columns:1fr 1fr; gap:32px; font-size:14px; line-height:1.9; }
+    .parent-content h3 { font-size:16px; margin:0 0 8px; font-weight:600; }
+    .parent-content p { margin:5px 0; }
+    .translation { font-weight:600; font-size:19px; }
+    .voice-label { display:block; margin:5px 0; }
+    select { padding:11px 12px; min-height:44px; border:1px solid #DCC59E; background:#FFF8E8; color:var(--ink); border-radius:10px; width:100%; max-width:350px; }
+    .small-note { font-size:12px; color:var(--muted); }
+    .footer { text-align:center; margin:14px 0 0; font-size:12px; color:var(--muted); }
+
+    @media (max-width:700px) {
+      .shell { padding:16px 14px 24px; }
+      .hero { gap:14px; margin-bottom:18px; }
+      .avatar { width:64px; height:64px; border-width:3px; }
+      .hero .en { font-size:12px; }
+      .hero .tagline { font-size:12px; margin-top:8px; }
+      .shelf-wrap { border-radius:20px; padding:24px 6px 0; }
+      .shelf { grid-template-columns:repeat(2,1fr); }
+      .slot { padding:0 8px 62px; }
+      .book-blurb { font-size:12px; }
+      .book { border-radius:14px 24px 24px 14px; border-left-width:7px; }
+      .spread { grid-template-columns:1fr; min-height:0; }
+      .art-side { padding:16px 14px 0; }
+      .art-side::after { display:none; }
+      .art-button { max-width:640px; }
+      .words-side { padding:18px 18px 12px; }
+      .sentence { font-size:32px; }
+      .invitation { margin:9px 0 17px; font-size:14px; }
+      .play { padding:12px 24px; font-size:19px; min-height:52px; }
+      .slow { margin-top:8px; }
+      .status { margin-top:8px; min-height:24px; max-width:330px; }
+      .turns { padding:12px 14px; }
+      .turn { font-size:14px; gap:5px; padding:10px 12px; }
+      .parent { margin-top:8px; }
+      .parent-content { grid-template-columns:1fr; gap:20px; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .slot, .is-entering .book, .art-button img.turned { animation:none; }
+      .cover, .stage { transition:none; }
+    }
+    @media (prefers-reduced-motion:no-preference) {
+      .play, .turn, .back { transition:background .15s ease; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section id="shelf-view" aria-labelledby="shelf-title">
+      <header class="hero">
+        <img class="avatar" id="avatar-source" src="assets/img/avatar.jpg" alt="卡通念念" width="88" height="88">
+        <div>
+          <h1 id="shelf-title" class="rounded" lang="zh-CN">跟着念念学英语</h1>
+          <p class="en" lang="en">Learn English with Niannian</p>
+          <p class="tagline">选一本小书，点开来读一读。</p>
+        </div>
+      </header>
+      <div class="shelf-wrap"><div class="shelf" id="shelf"></div></div>
+      <details class="parent">
+        <summary>给家长：怎么和孩子一起读？</summary>
+        <div class="parent-content">
+          <section>
+            <h3>一本一个小主题</h3>
+            <p>每本书有 10 页，每页一个简单词或句子。孩子可以今天只读一本，下次再读另一本。</p>
+            <p class="small-note">读完一本，书脊上会留下“★ 读过啦”（只保存在当前这台设备的浏览器里）。</p>
+          </section>
+          <section>
+            <h3>怎么读</h3>
+            <p>先指图，再听英文，再做一个动作。她指一指、回答中文，也是在参与；不必要求跟读。</p>
+            <p class="small-note">所有音频已经放进这个文件，播放时不用联网。如果没有声音，请检查设备音量，或用 Safari、Chrome、Edge 打开。</p>
+          </section>
+        </div>
+      </details>
+      <p class="footer">喜欢的一页，可以听很多遍。</p>
+    </section>
+
+    <section id="reader-view" hidden aria-label="绘本阅读">
+      <div class="reader-top">
+        <button class="back" id="back" aria-label="回到书架"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>回书架</button>
+        <p class="reader-title rounded" id="reader-title"></p>
+      </div>
+      <article class="book" id="book-frame">
+        <div class="spread">
+          <div class="art-side">
+            <button class="art-button" id="art-play" aria-label="播放本页英文">
+              <img id="illustration" alt="" width="1000" height="750">
+            </button>
+          </div>
+          <section class="words-side" aria-label="本页英文与播放">
+            <h2 class="sentence-wrap"><button class="sentence" id="sentence" lang="en"></button></h2>
+            <p class="invitation" id="invitation"></p>
+            <button class="play" id="play" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8c3 2 3 6 0 8M18 5c5 4 5 10 0 14" stroke-linecap="round"/></svg>
+              <span id="play-label">听一听</span>
+            </button>
+            <button class="slow" id="slow">慢慢听</button>
+            <p class="status" id="status" role="status" aria-live="polite"></p>
+          </section>
+        </div>
+        <nav class="turns" aria-label="绘本翻页">
+          <button class="turn" id="previous" aria-label="前一页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>前一页</button>
+          <div><p class="page-count" id="page-count" aria-live="polite"></p><div class="progress" aria-hidden="true"><span id="progress"></span></div></div>
+          <button class="turn" id="next" aria-label="下一页"><span id="next-label">下一页</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        </nav>
+      </article>
+      <details class="parent">
+        <summary>给家长：这一页怎么玩？</summary>
+        <div class="parent-content">
+          <section>
+            <h3>这一页</h3>
+            <p class="translation" id="translation"></p>
+            <p id="activity"></p>
+            <p class="small-note">先指图，再听英文，再做一个动作。她指一指、回答中文，也是在参与；不必要求跟读。</p>
+          </section>
+          <section>
+            <h3>选一个喜欢的声音</h3>
+            <label class="voice-label" for="voice">朗读声音</label>
+            <select id="voice"></select>
+            <p class="small-note">默认是可爱的英语童声，也可以换成亲切女声。正常和慢速都有独立音频，已放进绘本文件。</p>
+            <p class="small-note">键盘：左右方向键翻页，空格播放或停止，Esc 回书架。</p>
+          </section>
+        </div>
+      </details>
+    </section>
+    <noscript><p>请启用浏览器的 JavaScript，才能打开绘本和播放英文。</p></noscript>
+  </main>
+  <div class="stage" id="stage" aria-hidden="true"></div>
+  <script>const bookMeta = {"title": "Learn English with Niannian", "title_zh": "跟着念念学英语", "tagline": "选一本小书，点开来读一读。", "idle_message": "点句子或按钮，听念念说英语。"};</script>
+  <script>const bookImages = {"p00_cover.png": "assets/img/p00_cover.jpg", "p01_hello.png": "assets/img/p01_hello.jpg", "p02_sea.png": "assets/img/p02_sea.jpg", "h3_sun.png": "assets/img/h3_sun.jpg", "h4_shell.png": "assets/img/h4_shell.jpg", "h5_bye.png": "assets/img/h5_bye.jpg", "h6_morning.png": "assets/img/h6_morning.jpg", "h7_bird.png": "assets/img/h7_bird.jpg", "h8_bear.png": "assets/img/h8_bear.jpg", "h9_flower.png": "assets/img/h9_flower.jpg", "h10_later.png": "assets/img/h10_later.jpg", "p04_jump.png": "assets/img/p04_jump.jpg", "p03_splash.png": "assets/img/p03_splash.jpg", "pl_dig.png": "assets/img/pl_dig.jpg", "pl_run.png": "assets/img/pl_run.jpg", "p06_peekaboo.png": "assets/img/p06_peekaboo.jpg", "p6_slide.png": "assets/img/p6_slide.jpg", "p7_swing.png": "assets/img/p7_swing.jpg", "p8_roll.png": "assets/img/p8_roll.jpg", "p9_bubbles.png": "assets/img/p9_bubbles.jpg", "p10_clap.png": "assets/img/p10_clap.jpg", "p05_cake.png": "assets/img/p05_cake.jpg", "y_apple.png": "assets/img/y_apple.jpg", "y_milk.png": "assets/img/y_milk.jpg", "y_thanks.png": "assets/img/y_thanks.jpg", "y_done.png": "assets/img/y_done.jpg", "y6_banana.png": "assets/img/y6_banana.jpg", "y7_juice.png": "assets/img/y7_juice.jpg", "y8_noodles.png": "assets/img/y8_noodles.jpg", "y9_yum.png": "assets/img/y9_yum.jpg", "y10_water.png": "assets/img/y10_water.jpg", "c_red.png": "assets/img/c_red.jpg", "c_yellow.png": "assets/img/c_yellow.jpg", "c_blue.png": "assets/img/c_blue.jpg", "c_green.png": "assets/img/c_green.jpg", "c_pink.png": "assets/img/c_pink.jpg", "c6_orange.png": "assets/img/c6_orange.jpg", "c7_grapes.png": "assets/img/c7_grapes.jpg", "c8_cloud.png": "assets/img/c8_cloud.jpg", "c9_brown.png": "assets/img/c9_brown.jpg", "c10_rainbow.png": "assets/img/c10_rainbow.jpg", "p08_goodnight.png": "assets/img/p08_goodnight.jpg", "p07_lights.png": "assets/img/p07_lights.jpg", "n_stars.png": "assets/img/n_stars.jpg", "n_brush.png": "assets/img/n_brush.jpg", "n_book.png": "assets/img/n_book.jpg", "n6_tuck.png": "assets/img/n6_tuck.jpg", "n7_bed.png": "assets/img/n7_bed.jpg", "n8_sleepy.png": "assets/img/n8_sleepy.jpg", "n9_hug.png": "assets/img/n9_hug.jpg", "n10_dreams.png": "assets/img/n10_dreams.jpg"};</script>
+  <script>const bookChapters = [{"id": "hello", "title": "Hello!", "title_zh": "你好！", "blurb": "和念念挥挥手，打招呼", "color": "#E9B93D", "cover_image": "p00_cover.png", "cover_focus": "46%", "pages": [{"id": "hello-niannian", "image": "p01_hello.png", "sentence": "Hello! I'm Niannian.", "invitation": "念念在海边，她在做什么？", "translation": "你好！我是念念。", "activity": "和念念挥挥手，一起说 Hello。", "alt": "念念站在沙滩上，微笑着向你挥手。", "audio": {"ana": {"normal": "assets/audio/ana/hello-niannian-normal.mp3", "slow": "assets/audio/ana/hello-niannian-slow.mp3"}, "aria": {"normal": "assets/audio/aria/hello-niannian-normal.mp3", "slow": "assets/audio/aria/hello-niannian-slow.mp3"}}}, {"id": "hello-sea", "image": "p02_sea.png", "sentence": "Hello, sea!", "invitation": "海水亮晶晶，一起打招呼。", "translation": "你好，大海！", "activity": "指一指画里的大海，再挥挥手。", "alt": "念念在海边，对着闪闪发光的海水挥手。", "audio": {"ana": {"normal": "assets/audio/ana/hello-sea-normal.mp3", "slow": "assets/audio/ana/hello-sea-slow.mp3"}, "aria": {"normal": "assets/audio/aria/hello-sea-normal.mp3", "slow": "assets/audio/aria/hello-sea-slow.mp3"}}}, {"id": "hello-sun", "image": "h3_sun.png", "sentence": "Hello, sun!", "invitation": "太阳在哪里？它在对你笑呢。", "translation": "你好，太阳！", "activity": "指一指太阳，再挥挥手。", "alt": "念念在海边向微笑的金色太阳挥手。", "audio": {"ana": {"normal": "assets/audio/ana/hello-sun-normal.mp3", "slow": "assets/audio/ana/hello-sun-slow.mp3"}, "aria": {"normal": "assets/audio/aria/hello-sun-normal.mp3", "slow": "assets/audio/aria/hello-sun-slow.mp3"}}}, {"id": "see-shell", "image": "h4_shell.png", "sentence": "I see a shell!", "invitation": "念念手里有什么？", "translation": "我看见一个贝壳！", "activity": "指一指贝壳，一起说 shell。", "alt": "念念蹲在沙滩上，手心里托着一个粉色的贝壳。", "audio": {"ana": {"normal": "assets/audio/ana/see-shell-normal.mp3", "slow": "assets/audio/ana/see-shell-slow.mp3"}, "aria": {"normal": "assets/audio/aria/see-shell-normal.mp3", "slow": "assets/audio/aria/see-shell-slow.mp3"}}}, {"id": "bye-sea", "image": "h5_bye.png", "sentence": "Bye-bye, sea!", "invitation": "太阳要下山了，该回家啦。", "translation": "再见，大海！", "activity": "挥挥手，说 Bye-bye。", "alt": "念念在夕阳下的海边挥手说再见。", "audio": {"ana": {"normal": "assets/audio/ana/bye-sea-normal.mp3", "slow": "assets/audio/ana/bye-sea-slow.mp3"}, "aria": {"normal": "assets/audio/aria/bye-sea-normal.mp3", "slow": "assets/audio/aria/bye-sea-slow.mp3"}}}, {"id": "good-morning", "image": "h6_morning.png", "sentence": "Good morning!", "invitation": "早上的阳光暖暖的，念念醒啦！", "translation": "早上好！", "activity": "伸伸懒腰，说 Good morning。", "alt": "念念在早晨的窗前伸懒腰，窗台上有一只玩具熊。", "audio": {"ana": {"normal": "assets/audio/ana/good-morning-normal.mp3", "slow": "assets/audio/ana/good-morning-slow.mp3"}, "aria": {"normal": "assets/audio/aria/good-morning-normal.mp3", "slow": "assets/audio/aria/good-morning-slow.mp3"}}}, {"id": "bird", "image": "h7_bird.png", "sentence": "Hello, bird!", "invitation": "树上的小鸟在哪里？", "translation": "你好，小鸟！", "activity": "指一指小鸟，挥挥手。", "alt": "念念弯腰朝树枝上的小麻雀挥手。", "audio": {"ana": {"normal": "assets/audio/ana/bird-normal.mp3", "slow": "assets/audio/ana/bird-slow.mp3"}, "aria": {"normal": "assets/audio/aria/bird-normal.mp3", "slow": "assets/audio/aria/bird-slow.mp3"}}}, {"id": "hi-bear", "image": "h8_bear.png", "sentence": "Hi, bear!", "invitation": "念念在和谁打招呼？", "translation": "嗨，小熊！", "activity": "抱一抱玩具熊，挥挥手说 Hi。", "alt": "念念抱着大大的玩具熊，举起一只手打招呼。", "audio": {"ana": {"normal": "assets/audio/ana/hi-bear-normal.mp3", "slow": "assets/audio/ana/hi-bear-slow.mp3"}, "aria": {"normal": "assets/audio/aria/hi-bear-normal.mp3", "slow": "assets/audio/aria/hi-bear-slow.mp3"}}}, {"id": "flower", "image": "h9_flower.png", "sentence": "Hello, flower!", "invitation": "花园里开满了花。", "translation": "你好，花！", "activity": "闻一闻花香，说 Hello, flower。", "alt": "念念蹲在花园里，轻轻闻着一朵粉色的花。", "audio": {"ana": {"normal": "assets/audio/ana/flower-normal.mp3", "slow": "assets/audio/ana/flower-slow.mp3"}, "aria": {"normal": "assets/audio/aria/flower-normal.mp3", "slow": "assets/audio/aria/flower-slow.mp3"}}}, {"id": "see-you", "image": "h10_later.png", "sentence": "See you later!", "invitation": "念念要出门啦，她在和谁说再见？", "translation": "待会儿见！", "activity": "挥挥手，说 See you later。", "alt": "念念站在门口，回头向家人挥手说待会儿见。", "audio": {"ana": {"normal": "assets/audio/ana/see-you-normal.mp3", "slow": "assets/audio/ana/see-you-slow.mp3"}, "aria": {"normal": "assets/audio/aria/see-you-normal.mp3", "slow": "assets/audio/aria/see-you-slow.mp3"}}}]}, {"id": "play", "title": "Play!", "title_zh": "玩一玩", "blurb": "滑一滑，荡秋千，玩泡泡", "color": "#4FA6B8", "cover_image": "p04_jump.png", "cover_focus": "52%", "pages": [{"id": "splash", "image": "p03_splash.png", "sentence": "Splash, splash, splash!", "invitation": "小水壶在做什么？", "translation": "哗啦，哗啦，哗啦！", "activity": "手指做洒水的动作，一起学“哗啦”的声音。", "alt": "念念蹲在沙滩上，用浅蓝色小水壶洒水，水花四溅。", "audio": {"ana": {"normal": "assets/audio/ana/splash-normal.mp3", "slow": "assets/audio/ana/splash-slow.mp3"}, "aria": {"normal": "assets/audio/aria/splash-normal.mp3", "slow": "assets/audio/aria/splash-slow.mp3"}}}, {"id": "dig", "image": "pl_dig.png", "sentence": "Dig, dig, dig!", "invitation": "念念在沙滩上做什么？", "translation": "挖呀，挖呀，挖！", "activity": "两只手做挖沙子的动作。", "alt": "念念用黄色小铲子挖沙子，旁边放着黄色小桶。", "audio": {"ana": {"normal": "assets/audio/ana/dig-normal.mp3", "slow": "assets/audio/ana/dig-slow.mp3"}, "aria": {"normal": "assets/audio/aria/dig-normal.mp3", "slow": "assets/audio/aria/dig-slow.mp3"}}}, {"id": "run", "image": "pl_run.png", "sentence": "Run, run, run!", "invitation": "念念跑得快不快？", "translation": "跑呀，跑呀，跑！", "activity": "和孩子一起原地小跑步。", "alt": "念念张开双臂，穿着红雨靴在海边水花里奔跑。", "audio": {"ana": {"normal": "assets/audio/ana/run-normal.mp3", "slow": "assets/audio/ana/run-slow.mp3"}, "aria": {"normal": "assets/audio/aria/run-normal.mp3", "slow": "assets/audio/aria/run-slow.mp3"}}}, {"id": "jump", "image": "p04_jump.png", "sentence": "I can jump!", "invitation": "念念跳起来啦！", "translation": "我会跳！", "activity": "和孩子一起原地跳一跳，边跳边说 jump。", "alt": "念念穿着红雨靴在海滩上高高跳起，双手向上，开心大笑。", "audio": {"ana": {"normal": "assets/audio/ana/jump-normal.mp3", "slow": "assets/audio/ana/jump-slow.mp3"}, "aria": {"normal": "assets/audio/aria/jump-normal.mp3", "slow": "assets/audio/aria/jump-slow.mp3"}}}, {"id": "peekaboo", "image": "p06_peekaboo.png", "sentence": "Peek-a-boo!", "invitation": "念念躲在哪里？", "translation": "躲猫猫！", "activity": "用手遮住眼睛，再打开，说 Peek-a-boo。", "alt": "念念躲在木桌后面，只露出眼睛和小手，探出头来。", "audio": {"ana": {"normal": "assets/audio/ana/peekaboo-normal.mp3", "slow": "assets/audio/ana/peekaboo-slow.mp3"}, "aria": {"normal": "assets/audio/aria/peekaboo-normal.mp3", "slow": "assets/audio/aria/peekaboo-slow.mp3"}}}, {"id": "slide", "image": "p6_slide.png", "sentence": "Slide, slide!", "invitation": "念念从哪里滑下来？", "translation": "滑呀，滑呀！", "activity": "双手举高，像滑滑梯一样说 Slide。", "alt": "念念坐在红色滑梯上，举着双手，开心地滑下来。", "audio": {"ana": {"normal": "assets/audio/ana/slide-normal.mp3", "slow": "assets/audio/ana/slide-slow.mp3"}, "aria": {"normal": "assets/audio/aria/slide-normal.mp3", "slow": "assets/audio/aria/slide-slow.mp3"}}}, {"id": "swing", "image": "p7_swing.png", "sentence": "Swing, swing!", "invitation": "秋千荡得高不高？", "translation": "荡呀，荡呀！", "activity": "双手一前一后摆一摆，说 Swing。", "alt": "念念坐在秋千上，双脚向前伸，在蓝天下荡得高高的。", "audio": {"ana": {"normal": "assets/audio/ana/swing-normal.mp3", "slow": "assets/audio/ana/swing-slow.mp3"}, "aria": {"normal": "assets/audio/aria/swing-normal.mp3", "slow": "assets/audio/aria/swing-slow.mp3"}}}, {"id": "roll", "image": "p8_roll.png", "sentence": "Roll, roll, roll!", "invitation": "红色的大球在滚吗？", "translation": "滚呀，滚呀，滚！", "activity": "和孩子把球滚来滚去，边滚边说 Roll。", "alt": "念念蹲在草地上，双手推着一个红色的大球。", "audio": {"ana": {"normal": "assets/audio/ana/roll-normal.mp3", "slow": "assets/audio/ana/roll-slow.mp3"}, "aria": {"normal": "assets/audio/aria/roll-normal.mp3", "slow": "assets/audio/aria/roll-slow.mp3"}}}, {"id": "bubbles", "image": "p9_bubbles.png", "sentence": "Bubbles, bubbles!", "invitation": "泡泡飞来啦，抓到了吗？", "translation": "泡泡，泡泡！", "activity": "伸手去抓空中的泡泡，说 Bubbles。", "alt": "念念在花园里伸手去抓飘在空中的泡泡，笑得很开心。", "audio": {"ana": {"normal": "assets/audio/ana/bubbles-normal.mp3", "slow": "assets/audio/ana/bubbles-slow.mp3"}, "aria": {"normal": "assets/audio/aria/bubbles-normal.mp3", "slow": "assets/audio/aria/bubbles-slow.mp3"}}}, {"id": "clap", "image": "p10_clap.png", "sentence": "Clap, clap, clap!", "invitation": "念念在海边做什么？", "translation": "拍手，拍手，拍！", "activity": "和念念一起拍手，说 Clap。", "alt": "念念站在海边，高高举起手拍手，开心地笑。", "audio": {"ana": {"normal": "assets/audio/ana/clap-normal.mp3", "slow": "assets/audio/ana/clap-slow.mp3"}, "aria": {"normal": "assets/audio/aria/clap-normal.mp3", "slow": "assets/audio/aria/clap-slow.mp3"}}}]}, {"id": "yummy", "title": "Yummy!", "title_zh": "好吃的", "blurb": "吃一吃，喝一喝，说谢谢", "color": "#E58A73", "cover_image": "p05_cake.png", "cover_focus": "58%", "pages": [{"id": "apples", "image": "y_apple.png", "sentence": "I like apples!", "invitation": "红红的，圆圆的，是什么？", "translation": "我喜欢苹果！", "activity": "指一指苹果，说 apple。", "alt": "念念坐在桌前，双手举着一个红苹果，开心地笑。", "audio": {"ana": {"normal": "assets/audio/ana/apples-normal.mp3", "slow": "assets/audio/ana/apples-slow.mp3"}, "aria": {"normal": "assets/audio/aria/apples-normal.mp3", "slow": "assets/audio/aria/apples-slow.mp3"}}}, {"id": "milk", "image": "y_milk.png", "sentence": "Yummy milk!", "invitation": "念念在喝什么？", "translation": "好喝的牛奶！", "activity": "双手捧着杯子，假装喝一口，说 Yummy。", "alt": "念念双手捧着杯子喝牛奶，嘴边有一圈小小的奶胡子。", "audio": {"ana": {"normal": "assets/audio/ana/milk-normal.mp3", "slow": "assets/audio/ana/milk-slow.mp3"}, "aria": {"normal": "assets/audio/aria/milk-normal.mp3", "slow": "assets/audio/aria/milk-slow.mp3"}}}, {"id": "thanks", "image": "y_thanks.png", "sentence": "Thank you!", "invitation": "有人递给念念一块饼干。", "translation": "谢谢你！", "activity": "双手接过东西，说 Thank you。", "alt": "念念双手接过一块饼干，笑着点头道谢。", "audio": {"ana": {"normal": "assets/audio/ana/thanks-normal.mp3", "slow": "assets/audio/ana/thanks-slow.mp3"}, "aria": {"normal": "assets/audio/aria/thanks-normal.mp3", "slow": "assets/audio/aria/thanks-slow.mp3"}}}, {"id": "cake", "image": "p05_cake.png", "sentence": "Yummy cake!", "invitation": "看，一块绿色的蛋糕。", "translation": "好好吃的蛋糕！", "activity": "摸摸小肚子，一起说 Yummy。", "alt": "念念坐在咖啡馆桌前，开心地看着一块哈密瓜奶油蛋糕。", "audio": {"ana": {"normal": "assets/audio/ana/cake-normal.mp3", "slow": "assets/audio/ana/cake-slow.mp3"}, "aria": {"normal": "assets/audio/aria/cake-normal.mp3", "slow": "assets/audio/aria/cake-slow.mp3"}}}, {"id": "all-done", "image": "y_done.png", "sentence": "All done!", "invitation": "盘子里还有吗？", "translation": "吃完啦！", "activity": "张开双手，说 All done。", "alt": "念念张开双手，面前是一个吃干净的空盘子。", "audio": {"ana": {"normal": "assets/audio/ana/all-done-normal.mp3", "slow": "assets/audio/ana/all-done-slow.mp3"}, "aria": {"normal": "assets/audio/aria/all-done-normal.mp3", "slow": "assets/audio/aria/all-done-slow.mp3"}}}, {"id": "banana", "image": "y6_banana.png", "sentence": "I like bananas!", "invitation": "黄黄的，弯弯的，是什么？", "translation": "我喜欢香蕉！", "activity": "指一指香蕉，说 banana。", "alt": "念念坐在桌前，双手举着一根黄色的香蕉，开心地笑。", "audio": {"ana": {"normal": "assets/audio/ana/banana-normal.mp3", "slow": "assets/audio/ana/banana-slow.mp3"}, "aria": {"normal": "assets/audio/aria/banana-normal.mp3", "slow": "assets/audio/aria/banana-slow.mp3"}}}, {"id": "juice", "image": "y7_juice.png", "sentence": "Juice, please!", "invitation": "念念在喝什么？", "translation": "请给我果汁！", "activity": "做一个“请”的手势，说 Please。", "alt": "念念双手捧着一杯橙色果汁，用吸管喝着。", "audio": {"ana": {"normal": "assets/audio/ana/juice-normal.mp3", "slow": "assets/audio/ana/juice-slow.mp3"}, "aria": {"normal": "assets/audio/aria/juice-normal.mp3", "slow": "assets/audio/aria/juice-slow.mp3"}}}, {"id": "noodles", "image": "y8_noodles.png", "sentence": "Yummy noodles!", "invitation": "热热的面条，香不香？", "translation": "好吃的面条！", "activity": "用筷子夹一夹，说 Yummy。", "alt": "念念坐在餐桌前，双手拿着筷子，面前是一碗冒着热气的面条。", "audio": {"ana": {"normal": "assets/audio/ana/noodles-normal.mp3", "slow": "assets/audio/ana/noodles-slow.mp3"}, "aria": {"normal": "assets/audio/aria/noodles-normal.mp3", "slow": "assets/audio/aria/noodles-slow.mp3"}}}, {"id": "yum", "image": "y9_yum.png", "sentence": "Yum, yum, yum!", "invitation": "碗里有什么水果？", "translation": "嗯，嗯，嗯，好吃！", "activity": "摸摸小肚子，说 Yum, yum。", "alt": "念念用小勺子吃一块水果，鼓着小脸颊，露出满足的表情。", "audio": {"ana": {"normal": "assets/audio/ana/yum-normal.mp3", "slow": "assets/audio/ana/yum-slow.mp3"}, "aria": {"normal": "assets/audio/aria/yum-normal.mp3", "slow": "assets/audio/aria/yum-slow.mp3"}}}, {"id": "water", "image": "y10_water.png", "sentence": "Water, please!", "invitation": "念念手里是什么？", "translation": "请给我水！", "activity": "端起杯子，说 Water。", "alt": "念念双手捧着一杯清水，坐在桌前笑眯眯地看着前方。", "audio": {"ana": {"normal": "assets/audio/ana/water-normal.mp3", "slow": "assets/audio/ana/water-slow.mp3"}, "aria": {"normal": "assets/audio/aria/water-normal.mp3", "slow": "assets/audio/aria/water-slow.mp3"}}}]}, {"id": "colors", "title": "Colors!", "title_zh": "颜色", "blurb": "认识红、黄、蓝、绿、紫、白", "color": "#8DBB6A", "cover_image": "c_red.png", "cover_focus": "34%", "pages": [{"id": "red", "image": "c_red.png", "sentence": "Red boots!", "invitation": "念念的雨靴是什么颜色？", "translation": "红色的雨靴！", "activity": "找一找家里红色的东西。", "alt": "念念站在雨后的小路上，指着脚上红色的雨靴。", "audio": {"ana": {"normal": "assets/audio/ana/red-normal.mp3", "slow": "assets/audio/ana/red-slow.mp3"}, "aria": {"normal": "assets/audio/aria/red-normal.mp3", "slow": "assets/audio/aria/red-slow.mp3"}}}, {"id": "yellow", "image": "c_yellow.png", "sentence": "Yellow flower!", "invitation": "念念手里的花是什么颜色？", "translation": "黄色的花！", "activity": "找一找家里黄色的东西。", "alt": "念念举着一朵大大的黄色花朵。", "audio": {"ana": {"normal": "assets/audio/ana/yellow-normal.mp3", "slow": "assets/audio/ana/yellow-slow.mp3"}, "aria": {"normal": "assets/audio/aria/yellow-normal.mp3", "slow": "assets/audio/aria/yellow-slow.mp3"}}}, {"id": "blue", "image": "c_blue.png", "sentence": "Blue sky!", "invitation": "抬头看，天空是什么颜色？", "translation": "蓝色的天空！", "activity": "抬头指一指天空，说 blue。", "alt": "念念站在草坡上，指着蓝蓝的天空和白云。", "audio": {"ana": {"normal": "assets/audio/ana/blue-normal.mp3", "slow": "assets/audio/ana/blue-slow.mp3"}, "aria": {"normal": "assets/audio/aria/blue-normal.mp3", "slow": "assets/audio/aria/blue-slow.mp3"}}}, {"id": "green", "image": "c_green.png", "sentence": "Green leaf!", "invitation": "念念用什么当小伞？", "translation": "绿色的叶子！", "activity": "找一找绿色的叶子或玩具。", "alt": "念念举着一片大大的绿叶，像举着小伞。", "audio": {"ana": {"normal": "assets/audio/ana/green-normal.mp3", "slow": "assets/audio/ana/green-slow.mp3"}, "aria": {"normal": "assets/audio/aria/green-normal.mp3", "slow": "assets/audio/aria/green-slow.mp3"}}}, {"id": "pink", "image": "c_pink.png", "sentence": "Pink balloon!", "invitation": "念念拉着什么？", "translation": "粉色的气球！", "activity": "指一指粉色，再抬头看气球。", "alt": "念念抬头看着手里牵着的大大的粉色气球。", "audio": {"ana": {"normal": "assets/audio/ana/pink-normal.mp3", "slow": "assets/audio/ana/pink-slow.mp3"}, "aria": {"normal": "assets/audio/aria/pink-normal.mp3", "slow": "assets/audio/aria/pink-slow.mp3"}}}, {"id": "orange", "image": "c6_orange.png", "sentence": "Orange carrot!", "invitation": "念念举着的是什么？", "translation": "橙色的胡萝卜！", "activity": "找一找家里橙色的东西。", "alt": "念念举着一根橙色的胡萝卜，笑得很开心。", "audio": {"ana": {"normal": "assets/audio/ana/orange-normal.mp3", "slow": "assets/audio/ana/orange-slow.mp3"}, "aria": {"normal": "assets/audio/aria/orange-normal.mp3", "slow": "assets/audio/aria/orange-slow.mp3"}}}, {"id": "purple", "image": "c7_grapes.png", "sentence": "Purple grapes!", "invitation": "紫色的葡萄在哪里？", "translation": "紫色的葡萄！", "activity": "指一指紫色的葡萄。", "alt": "念念指着藤上一串紫色的葡萄。", "audio": {"ana": {"normal": "assets/audio/ana/purple-normal.mp3", "slow": "assets/audio/ana/purple-slow.mp3"}, "aria": {"normal": "assets/audio/aria/purple-normal.mp3", "slow": "assets/audio/aria/purple-slow.mp3"}}}, {"id": "white", "image": "c8_cloud.png", "sentence": "White cloud!", "invitation": "天上飘着什么？", "translation": "白色的云！", "activity": "躺下来看看云朵，说 White cloud。", "alt": "念念躺在草坡上，看着天空中一大朵白云。", "audio": {"ana": {"normal": "assets/audio/ana/white-normal.mp3", "slow": "assets/audio/ana/white-slow.mp3"}, "aria": {"normal": "assets/audio/aria/white-normal.mp3", "slow": "assets/audio/aria/white-slow.mp3"}}}, {"id": "brown", "image": "c9_brown.png", "sentence": "Brown tree!", "invitation": "大树是什么颜色？", "translation": "棕色的树！", "activity": "摸一摸树干，说 Brown。", "alt": "念念站在大树旁，伸手摸着棕色的树干。", "audio": {"ana": {"normal": "assets/audio/ana/brown-normal.mp3", "slow": "assets/audio/ana/brown-slow.mp3"}, "aria": {"normal": "assets/audio/aria/brown-normal.mp3", "slow": "assets/audio/aria/brown-slow.mp3"}}}, {"id": "rainbow", "image": "c10_rainbow.png", "sentence": "Rainbow!", "invitation": "雨后天空出现了什么？", "translation": "彩虹！", "activity": "指着彩虹，数一数有几种颜色。", "alt": "念念穿着红雨靴，指着天空中一道大大的彩虹。", "audio": {"ana": {"normal": "assets/audio/ana/rainbow-normal.mp3", "slow": "assets/audio/ana/rainbow-slow.mp3"}, "aria": {"normal": "assets/audio/aria/rainbow-normal.mp3", "slow": "assets/audio/aria/rainbow-slow.mp3"}}}]}, {"id": "night", "title": "Good night!", "title_zh": "晚安", "blurb": "睡觉前的小故事", "color": "#5B6BAE", "cover_image": "p08_goodnight.png", "cover_focus": "30%", "pages": [{"id": "lights", "image": "p07_lights.png", "sentence": "Look at the lights!", "invitation": "夜晚的灯光是什么颜色？", "translation": "看，好多灯！", "activity": "指一指画里的彩色灯光，说一说颜色。", "alt": "念念在夜晚的海边拿着棒棒糖，抬头看远处闪亮的桥和城市灯光。", "audio": {"ana": {"normal": "assets/audio/ana/lights-normal.mp3", "slow": "assets/audio/ana/lights-slow.mp3"}, "aria": {"normal": "assets/audio/aria/lights-normal.mp3", "slow": "assets/audio/aria/lights-slow.mp3"}}}, {"id": "stars", "image": "n_stars.png", "sentence": "Look at the stars!", "invitation": "天上有什么在闪呀闪？", "translation": "看，好多星星！", "activity": "手指向上指，一起数一数星星。", "alt": "念念站在夜晚的草坡上，指着满天的星星，周围有萤火虫。", "audio": {"ana": {"normal": "assets/audio/ana/stars-normal.mp3", "slow": "assets/audio/ana/stars-slow.mp3"}, "aria": {"normal": "assets/audio/aria/stars-normal.mp3", "slow": "assets/audio/aria/stars-slow.mp3"}}}, {"id": "brush", "image": "n_brush.png", "sentence": "Brush, brush, brush!", "invitation": "睡觉前要做什么？", "translation": "刷呀，刷呀，刷！", "activity": "假装刷牙，和念念一起“刷刷刷”。", "alt": "念念穿着睡衣站在小凳子上刷牙，嘴边有白白的泡泡。", "audio": {"ana": {"normal": "assets/audio/ana/brush-normal.mp3", "slow": "assets/audio/ana/brush-slow.mp3"}, "aria": {"normal": "assets/audio/aria/brush-normal.mp3", "slow": "assets/audio/aria/brush-slow.mp3"}}}, {"id": "book", "image": "n_book.png", "sentence": "Read a book!", "invitation": "床上，灯亮着，念念在做什么？", "translation": "读一本书！", "activity": "做一个翻书的动作，说 book。", "alt": "念念盖着星星被子坐在床上看一本书，床头灯亮着。", "audio": {"ana": {"normal": "assets/audio/ana/book-normal.mp3", "slow": "assets/audio/ana/book-slow.mp3"}, "aria": {"normal": "assets/audio/aria/book-normal.mp3", "slow": "assets/audio/aria/book-slow.mp3"}}}, {"id": "tuck", "image": "n6_tuck.png", "sentence": "Night-night, bear!", "invitation": "念念在给谁盖被子？", "translation": "晚安，小熊！", "activity": "假装给玩具盖被子，轻轻说 Night-night。", "alt": "念念跪在床边，给小熊玩具盖上星星被子。", "audio": {"ana": {"normal": "assets/audio/ana/tuck-normal.mp3", "slow": "assets/audio/ana/tuck-slow.mp3"}, "aria": {"normal": "assets/audio/aria/tuck-normal.mp3", "slow": "assets/audio/aria/tuck-slow.mp3"}}}, {"id": "bed", "image": "n7_bed.png", "sentence": "Time for bed!", "invitation": "念念要去哪里？", "translation": "该睡觉啦！", "activity": "拍拍床，说 Bed。", "alt": "念念抱着小熊，指着床，准备去睡觉。", "audio": {"ana": {"normal": "assets/audio/ana/bed-normal.mp3", "slow": "assets/audio/ana/bed-slow.mp3"}, "aria": {"normal": "assets/audio/aria/bed-normal.mp3", "slow": "assets/audio/aria/bed-slow.mp3"}}}, {"id": "sleepy", "image": "n8_sleepy.png", "sentence": "I'm sleepy!", "invitation": "念念揉揉眼睛，她怎么啦？", "translation": "我困啦！", "activity": "做一个打哈欠的动作，说 Sleepy。", "alt": "念念坐在床上打哈欠，一只手揉着眼睛。", "audio": {"ana": {"normal": "assets/audio/ana/sleepy-normal.mp3", "slow": "assets/audio/ana/sleepy-slow.mp3"}, "aria": {"normal": "assets/audio/aria/sleepy-normal.mp3", "slow": "assets/audio/aria/sleepy-slow.mp3"}}}, {"id": "hug", "image": "n9_hug.png", "sentence": "Hug your bear!", "invitation": "念念抱着谁？", "translation": "抱抱你的小熊！", "activity": "抱一抱自己，说 Hug。", "alt": "念念躺在床上，紧紧抱着一只棕色的小熊。", "audio": {"ana": {"normal": "assets/audio/ana/hug-normal.mp3", "slow": "assets/audio/ana/hug-slow.mp3"}, "aria": {"normal": "assets/audio/aria/hug-normal.mp3", "slow": "assets/audio/aria/hug-slow.mp3"}}}, {"id": "dreams", "image": "n10_dreams.png", "sentence": "Sweet dreams!", "invitation": "念念做了什么好梦？", "translation": "做个好梦！", "activity": "闭上眼睛，轻声说 Sweet dreams。", "alt": "念念闭着眼睛睡在床上，头顶飘着闪闪的星星梦。", "audio": {"ana": {"normal": "assets/audio/ana/dreams-normal.mp3", "slow": "assets/audio/ana/dreams-slow.mp3"}, "aria": {"normal": "assets/audio/aria/dreams-normal.mp3", "slow": "assets/audio/aria/dreams-slow.mp3"}}}, {"id": "goodnight", "image": "p08_goodnight.png", "sentence": "Good night, moon!", "invitation": "轻轻地，和月亮说晚安。", "translation": "晚安，月亮！", "activity": "挥挥手，轻声说晚安。", "alt": "念念穿着睡衣站在窗边，向夜空中的月亮和星星挥手道晚安。", "audio": {"ana": {"normal": "assets/audio/ana/goodnight-normal.mp3", "slow": "assets/audio/ana/goodnight-slow.mp3"}, "aria": {"normal": "assets/audio/aria/goodnight-normal.mp3", "slow": "assets/audio/aria/goodnight-slow.mp3"}}}]}];</script>
+  <script>(function (root) {
+'use strict';
+class VoicePlayer {
+constructor({ synth, Utterance, onState = () => {}, idleMessage = '点句子或按钮，听小熊说英语。' }) {
+this.synth = synth;
+this.Utterance = Utterance;
+this.onState = onState;
+this.idleMessage = idleMessage;
+this.generation = 0;
+this.timer = null;
+this.current = null;
+this.supported = !!(synth && typeof synth.speak === 'function' && Utterance);
+}
+availableVoices() {
+return this.supported ? this.synth.getVoices().filter(voice => /^en(?:[-_]|$)/i.test(voice.lang)) : [];
+}
+stop() {
+this.generation += 1;
+clearTimeout(this.timer);
+this.timer = null;
+this.current = null;
+if (this.supported) this.synth.cancel();
+this.onState({ state: 'ready', message: this.idleMessage });
+}
+read(sentence, { rate = 0.85, voiceURI = '' } = {}) {
+this.stop();
+if (!this.supported) {
+this.onState({ state: 'unavailable', message: '这个浏览器暂时不能朗读。请用 Safari、Chrome 或 Edge 打开绘本。' });
+return;
+}
+const voices = this.availableVoices();
+if (!voices.length && this.synth.getVoices().length) {
+this.onState({ state: 'error', message: '设备还没有英语声音。请先在设备的语音设置中添加英语声音。' });
+return;
+}
+const voice = voices.find(item => item.voiceURI === voiceURI)
+|| voices.find(item => item.localService && /^en-US$/i.test(item.lang))
+|| voices.find(item => item.localService)
+|| voices.find(item => /^en-US$/i.test(item.lang))
+|| voices[0];
+const utterance = new this.Utterance(sentence);
+utterance.lang = voice ? voice.lang : 'en-US';
+if (voice) utterance.voice = voice;
+utterance.rate = rate;
+utterance.pitch = 1;
+utterance.volume = 1;
+this.current = utterance;
+const generation = this.generation;
+const live = () => generation === this.generation;
+const finish = state => {
+if (!live()) return;
+clearTimeout(this.timer);
+this.timer = null;
+this.current = null;
+this.onState(state);
+};
+utterance.onstart = () => {
+if (!live()) return;
+clearTimeout(this.timer);
+this.timer = null;
+this.onState({ state: 'playing', message: '正在朗读…' });
+};
+utterance.onend = () => finish({ state: 'ready', message: '听完啦。可以再听一次，或翻到下一页。' });
+utterance.onerror = event => finish({ state: 'error', message: event.error === 'not-allowed'
+? '请再点一次播放，并检查浏览器的声音权限。'
+: '这次没有播放成功。请检查音量和网络，再点一次；也可以换一个英语声音。' });
+this.onState({ state: 'starting', message: '准备朗读…' });
+this.timer = setTimeout(() => {
+if (!live()) return;
+this.generation += 1;
+this.synth.cancel();
+this.current = null;
+this.timer = null;
+this.onState({ state: 'error', message: '声音还没准备好。请检查音量和网络，再点一次播放。' });
+}, 10000);
+try {
+this.synth.speak(utterance);
+} catch {
+finish({ state: 'error', message: '朗读暂时不可用。请换一个英语声音，或用 Safari、Chrome 打开。' });
+}
+}
+}
+class RecordedPlayer {
+constructor({ pages, AudioClass, onState = () => {}, idleMessage = '点句子或按钮，听小熊说英语。' }) {
+this.pages = pages;
+this.AudioClass = AudioClass;
+this.onState = onState;
+this.idleMessage = idleMessage;
+this.supported = !!AudioClass;
+this.current = null;
+this.generation = 0;
+}
+availableVoices() {
+return [
+{ voiceURI: 'ana', name: '小朋友 Ana · 可爱童声', lang: 'en-US' },
+{ voiceURI: 'aria', name: 'Aria · 亲切女声', lang: 'en-US' },
+];
+}
+stop() {
+this.generation += 1;
+if (this.current) {
+this.current.pause();
+this.current.currentTime = 0;
+this.current = null;
+}
+this.onState({ state: 'ready', message: this.idleMessage });
+}
+read(sentence, { rate = 0.85, voiceURI = 'ana' } = {}) {
+this.stop();
+const page = this.pages.find(item => item.sentence === sentence);
+const voice = voiceURI === 'aria' ? 'aria' : 'ana';
+const mode = rate < 0.8 ? 'slow' : 'normal';
+const source = page && page.audio && page.audio[voice] && page.audio[voice][mode];
+if (!source || !this.supported) {
+this.onState({ state: 'error', message: '这段音频暂时不可用，请重新打开完整绘本文件。' });
+return;
+}
+const audio = new this.AudioClass(source);
+this.current = audio;
+const generation = this.generation;
+const live = () => generation === this.generation;
+const finish = state => {
+if (!live()) return;
+this.current = null;
+this.onState(state);
+};
+audio.onplaying = () => {
+if (live()) this.onState({ state: 'playing', message: '正在朗读…' });
+};
+audio.onended = () => finish({ state: 'ready', message: '听完啦。可以再听一次，或翻到下一页。' });
+const error = () => finish({ state: 'error', message: '这次没有播放成功。请再点一次，并检查设备音量。' });
+audio.onerror = error;
+this.onState({ state: 'starting', message: '准备朗读…' });
+try {
+const started = audio.play();
+if (started && typeof started.catch === 'function') started.catch(error);
+} catch {
+error();
+}
+}
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = { VoicePlayer, RecordedPlayer };
+else {
+root.VoicePlayer = VoicePlayer;
+root.RecordedPlayer = RecordedPlayer;
+}
+})(typeof globalThis !== 'undefined' ? globalThis : this);</script>
+  <script>'use strict';
+const byId = id => document.getElementById(id);
+const elements = Object.fromEntries([
+'shelf-view', 'reader-view', 'shelf', 'stage', 'back', 'reader-title', 'illustration',
+'art-play', 'sentence', 'invitation', 'play', 'play-label', 'slow', 'status', 'previous',
+'next', 'next-label', 'page-count', 'progress', 'translation', 'activity', 'voice', 'book-frame',
+].map(id => [id, byId(id)]));
+const allPages = bookChapters.flatMap(chapter => chapter.pages);
+const READ_KEY = 'niannian-read-chapters';
+let chapterIndex = 0;
+let pageIndex = 0;
+let playing = false;
+let busy = false;
+let lastCard = null;
+const player = new RecordedPlayer({
+pages: allPages,
+AudioClass: window.Audio,
+idleMessage: bookMeta.idle_message,
+onState({ state, message }) {
+playing = state === 'playing' || state === 'starting';
+elements.status.textContent = message;
+elements.status.classList.toggle('is-error', state === 'error' || state === 'unavailable');
+elements.sentence.classList.toggle('is-speaking', state === 'playing');
+elements['play-label'].textContent = playing ? '停止朗读' : '听一听';
+elements.play.setAttribute('aria-pressed', String(playing));
+},
+});
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const nextFrame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+function make(tag, className, text) {
+const node = document.createElement(tag);
+if (className) node.className = className;
+if (text !== undefined) node.textContent = text;
+return node;
+}
+function readSet() {
+try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); } catch { return new Set(); }
+}
+function markRead(id) {
+try {
+const done = readSet();
+done.add(id);
+localStorage.setItem(READ_KEY, JSON.stringify([...done]));
+} catch { /* storage may be blocked for local files; progress simply is not remembered */ }
+}
+function buildCover(chapter) {
+const cover = make('span', 'cover');
+cover.style.setProperty('--book', chapter.color);
+cover.style.setProperty('--focus', chapter.cover_focus || '50%');
+const art = make('span', 'cover-art');
+const image = make('img');
+image.src = bookImages[chapter.cover_image];
+image.alt = '';
+art.append(image, make('span', 'cover-count', `${chapter.pages.length} 页`));
+const label = make('span', 'cover-label');
+label.append(make('span', 'cover-en', chapter.title), make('span', 'cover-zh', chapter.title_zh));
+cover.append(art, label);
+return cover;
+}
+function renderShelf() {
+const done = readSet();
+const slots = bookChapters.map((chapter, index) => {
+const slot = make('div', 'slot');
+slot.style.setProperty('--i', index);
+const card = make('button', 'book-card');
+card.type = 'button';
+card.dataset.index = String(index);
+card.setAttribute('aria-label', `打开：${chapter.title}，${chapter.title_zh}。${chapter.blurb}`);
+const cover = buildCover(chapter);
+if (done.has(chapter.id)) cover.querySelector('.cover-art').append(make('span', 'cover-star', '★ 读过啦'));
+card.append(cover, make('span', 'book-blurb', chapter.blurb));
+card.addEventListener('click', () => openChapter(index, card));
+slot.append(card);
+return slot;
+});
+elements.shelf.replaceChildren(...slots);
+}
+function buildFlyingBook(chapter, width, height) {
+const fly = make('div', 'fly');
+fly.style.width = `${width * 2}px`;
+fly.style.height = `${height}px`;
+fly.style.setProperty('--book', chapter.color);
+const right = make('div', 'fly-page fly-right');
+right.append(
+make('p', 'fly-kicker', '跟着念念学英语'),
+make('p', 'fly-title', chapter.title),
+make('p', 'fly-zh', chapter.title_zh),
+make('p', 'fly-hint', '翻开，一起读！'),
+);
+const turning = make('div', 'fly-cover');
+const front = make('div', 'fly-face fly-front');
+front.append(buildCover(chapter));
+const back = make('div', 'fly-face fly-back');
+const avatar = make('img', 'fly-avatar');
+avatar.src = byId('avatar-source').src;
+avatar.alt = '';
+back.append(avatar, make('p', 'fly-back-text', '念念的小书'));
+turning.append(front, back);
+fly.append(right, turning);
+return fly;
+}
+async function openChapter(index, card) {
+if (busy) return;
+busy = true;
+lastCard = card;
+chapterIndex = index;
+pageIndex = 0;
+const chapter = bookChapters[index];
+if (reduceMotion()) {
+showReader();
+busy = false;
+return;
+}
+const viewportWidth = window.innerWidth;
+const viewportHeight = window.innerHeight;
+const height = Math.max(180, Math.min(viewportHeight * 0.7, 560, viewportWidth * 0.6));
+const width = height * 0.75;
+const start = card.querySelector('.cover').getBoundingClientRect();
+const scale = start.width / width;
+const fly = buildFlyingBook(chapter, width, height);
+fly.style.left = `${(viewportWidth - width * 2) / 2}px`;
+fly.style.top = `${(viewportHeight - height) / 2}px`;
+fly.style.transform = `translate(${start.left + start.width / 2 - viewportWidth / 2 - (scale * width) / 2}px, ${start.top + start.height / 2 - viewportHeight / 2}px) scale(${scale})`;
+elements.stage.replaceChildren(fly);
+card.classList.add('is-lifted');
+elements.stage.classList.add('is-on');
+await nextFrame();
+fly.style.transition = 'transform .6s cubic-bezier(.2,.8,.25,1)';
+fly.style.transform = `translate(${-width / 2}px, 0) scale(1)`;
+await wait(680);
+fly.classList.add('is-open');
+fly.style.transition = 'transform .95s ease-in-out';
+fly.style.transform = 'translate(0, 0) scale(1)';
+await wait(1050);
+showReader();
+elements.stage.classList.remove('is-on');
+await wait(450);
+elements.stage.replaceChildren();
+card.classList.remove('is-lifted');
+busy = false;
+}
+function showReader() {
+elements['shelf-view'].hidden = true;
+elements['reader-view'].hidden = false;
+elements['reader-view'].classList.remove('is-entering');
+void elements['reader-view'].offsetWidth;
+elements['reader-view'].classList.add('is-entering');
+window.scrollTo(0, 0);
+renderPage();
+elements.sentence.focus({ preventScroll: true });
+}
+function closeReader() {
+if (busy) return;
+player.stop();
+const chapter = bookChapters[chapterIndex];
+if (pageIndex === chapter.pages.length - 1) markRead(chapter.id);
+elements['reader-view'].hidden = true;
+elements['shelf-view'].hidden = false;
+renderShelf();
+window.scrollTo(0, 0);
+const again = elements.shelf.querySelector(`[data-index="${chapterIndex}"]`);
+if (again) again.focus({ preventScroll: true });
+}
+function renderPage() {
+player.stop();
+const chapter = bookChapters[chapterIndex];
+const page = chapter.pages[pageIndex];
+const last = pageIndex === chapter.pages.length - 1;
+elements['reader-view'].style.setProperty('--book', chapter.color);
+elements['reader-title'].textContent = `${chapter.title} · ${chapter.title_zh}`;
+elements.illustration.src = bookImages[page.image];
+elements.illustration.alt = page.alt;
+elements.illustration.classList.remove('turned');
+void elements.illustration.offsetWidth;
+elements.illustration.classList.add('turned');
+elements.sentence.textContent = page.sentence;
+elements.sentence.setAttribute('aria-label', `播放：${page.sentence}`);
+elements['art-play'].setAttribute('aria-label', `播放：${page.sentence}`);
+elements.invitation.textContent = page.invitation;
+elements.translation.textContent = page.translation;
+elements.activity.textContent = page.activity;
+elements.previous.disabled = pageIndex === 0;
+elements['next-label'].textContent = last ? '回书架' : '下一页';
+elements.next.setAttribute('aria-label', last ? '读完了，回到书架' : '下一页');
+elements['page-count'].textContent = `第 ${pageIndex + 1} 页 / 共 ${chapter.pages.length} 页`;
+elements.progress.style.width = `${((pageIndex + 1) / chapter.pages.length) * 100}%`;
+if (last) markRead(chapter.id);
+}
+function read(rate = 0.85) {
+const page = bookChapters[chapterIndex].pages[pageIndex];
+player.read(page.sentence, { rate, voiceURI: elements.voice.value || 'ana' });
+}
+function turn(direction) {
+const chapter = bookChapters[chapterIndex];
+if (direction > 0 && pageIndex === chapter.pages.length - 1) {
+closeReader();
+return;
+}
+const nextPage = Math.max(0, Math.min(chapter.pages.length - 1, pageIndex + direction));
+if (nextPage === pageIndex) return;
+pageIndex = nextPage;
+renderPage();
+}
+function setupVoices() {
+elements.voice.replaceChildren(...player.availableVoices().map(voice => new Option(voice.name, voice.voiceURI)));
+}
+elements.play.addEventListener('click', () => (playing ? player.stop() : read()));
+elements.slow.addEventListener('click', () => read(0.65));
+elements.sentence.addEventListener('click', () => read());
+elements['art-play'].addEventListener('click', () => read());
+elements.previous.addEventListener('click', () => turn(-1));
+elements.next.addEventListener('click', () => turn(1));
+elements.back.addEventListener('click', closeReader);
+elements.voice.addEventListener('change', () => player.stop());
+document.addEventListener('keydown', event => {
+if (elements['reader-view'].hidden || busy) return;
+if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+if (event.target.closest('select, input, textarea, summary, [contenteditable]')) return;
+if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+event.preventDefault();
+turn(event.key === 'ArrowRight' ? 1 : -1);
+} else if (event.key === 'Escape') {
+closeReader();
+} else if (event.key === ' ' && !event.target.closest('button')) {
+event.preventDefault();
+playing ? player.stop() : read();
+}
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) player.stop(); });
+window.addEventListener('pagehide', () => player.stop());
+setupVoices();
+renderShelf();</script>
+</body>
+</html>
