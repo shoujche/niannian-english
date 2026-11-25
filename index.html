@@ -94,6 +94,13 @@
     .slow { margin-top:15px; min-height:44px; padding:8px 18px; background:transparent; color:var(--accent-dark); font-size:15px; border-bottom:1px solid #D9B79F; }
     .status { margin:15px 0 0; font-size:12px; color:var(--muted); min-height:38px; line-height:1.65; max-width:270px; }
     .status.is-error { color:#A33F2E; }
+    .auto-switch { display:inline-flex; align-items:center; gap:10px; margin-top:10px; min-height:44px; cursor:pointer; font-size:14px; color:var(--muted); user-select:none; }
+    .auto-switch input { position:absolute; opacity:0; width:1px; height:1px; }
+    .auto-switch .track { position:relative; width:42px; height:24px; border-radius:14px; background:#D8C7A6; transition:background .2s ease; flex-shrink:0; }
+    .auto-switch .track::after { content:""; position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s ease; }
+    .auto-switch input:checked + .track { background:var(--book); filter:saturate(1.1) brightness(.92); }
+    .auto-switch input:checked + .track::after { transform:translateX(18px); }
+    .auto-switch input:focus-visible + .track { outline:3px solid #3F7F8C; outline-offset:3px; }
     .turns { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 25px; border-top:1px solid var(--line); }
     .turn { min-height:48px; display:inline-flex; align-items:center; gap:10px; background:var(--soft); color:var(--ink); border-radius:16px; padding:11px 17px; font-size:16px; }
     .turn:hover:not(:disabled) { background:#F0DBAE; }
@@ -198,6 +205,7 @@
             </button>
             <button class="slow" id="slow">慢慢听</button>
             <p class="status" id="status" role="status" aria-live="polite"></p>
+            <label class="auto-switch"><input type="checkbox" id="autoplay" checked><span class="track" aria-hidden="true"></span><span class="auto-label">翻页自动朗读</span></label>
           </section>
         </div>
         <nav class="turns" aria-label="绘本翻页">
@@ -220,6 +228,7 @@
             <label class="voice-label" for="voice">朗读声音</label>
             <select id="voice"></select>
             <p class="small-note">默认是可爱的英语童声，也可以换成亲切女声。正常和慢速都有独立音频，已放进绘本文件。</p>
+            <p class="small-note">每翻到一页，会自动朗读一遍。不想自动朗读，可以关掉“翻页自动朗读”的开关。</p>
             <p class="small-note">键盘：左右方向键翻页，空格播放或停止，Esc 回书架。</p>
           </section>
         </div>
@@ -314,7 +323,7 @@ finish({ state: 'error', message: '朗读暂时不可用。请换一个英语声
 }
 }
 class RecordedPlayer {
-constructor({ pages, AudioClass, onState = () => {}, idleMessage = '点句子或按钮，听小熊说英语。' }) {
+constructor({ pages, AudioClass, onState = () => {}, idleMessage = '点句子或按钮，听小熊说英语。', shared = false }) {
 this.pages = pages;
 this.AudioClass = AudioClass;
 this.onState = onState;
@@ -322,6 +331,18 @@ this.idleMessage = idleMessage;
 this.supported = !!AudioClass;
 this.current = null;
 this.generation = 0;
+this.shared = shared;
+this.element = null;
+}
+unlock() {
+if (!this.shared || !this.supported || this.element) return;
+const audio = new this.AudioClass();
+this.element = audio;
+audio.src = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+try {
+const started = audio.play();
+if (started && typeof started.catch === 'function') started.catch(() => {});
+} catch { /* an unlock that fails just means the first play needs a tap */ }
 }
 availableVoices() {
 return [
@@ -338,7 +359,7 @@ this.current = null;
 }
 this.onState({ state: 'ready', message: this.idleMessage });
 }
-read(sentence, { rate = 0.85, voiceURI = 'ana' } = {}) {
+read(sentence, { rate = 0.85, voiceURI = 'ana', auto = false } = {}) {
 this.stop();
 const page = this.pages.find(item => item.sentence === sentence);
 const voice = voiceURI === 'aria' ? 'aria' : 'ana';
@@ -348,7 +369,13 @@ if (!source || !this.supported) {
 this.onState({ state: 'error', message: '这段音频暂时不可用，请重新打开完整绘本文件。' });
 return;
 }
-const audio = new this.AudioClass(source);
+let audio;
+if (this.shared) {
+audio = this.element || (this.element = new this.AudioClass());
+audio.src = source;
+} else {
+audio = new this.AudioClass(source);
+}
 this.current = audio;
 const generation = this.generation;
 const live = () => generation === this.generation;
@@ -362,13 +389,16 @@ if (live()) this.onState({ state: 'playing', message: '正在朗读…' });
 };
 audio.onended = () => finish({ state: 'ready', message: '听完啦。可以再听一次，或翻到下一页。' });
 const error = () => finish({ state: 'error', message: '这次没有播放成功。请再点一次，并检查设备音量。' });
+const refused = failure => (auto && failure && failure.name === 'NotAllowedError'
+? finish({ state: 'ready', message: '点一下“听一听”，就能听到声音。' })
+: error());
 audio.onerror = error;
 this.onState({ state: 'starting', message: '准备朗读…' });
 try {
 const started = audio.play();
-if (started && typeof started.catch === 'function') started.catch(error);
-} catch {
-error();
+if (started && typeof started.catch === 'function') started.catch(refused);
+} catch (failure) {
+refused(failure);
 }
 }
 }
@@ -383,19 +413,22 @@ const byId = id => document.getElementById(id);
 const elements = Object.fromEntries([
 'shelf-view', 'reader-view', 'shelf', 'stage', 'back', 'reader-title', 'illustration',
 'art-play', 'sentence', 'invitation', 'play', 'play-label', 'slow', 'status', 'previous',
-'next', 'next-label', 'page-count', 'progress', 'translation', 'activity', 'voice', 'book-frame',
+'next', 'next-label', 'page-count', 'progress', 'translation', 'activity', 'voice', 'book-frame', 'autoplay',
 ].map(id => [id, byId(id)]));
 const allPages = bookChapters.flatMap(chapter => chapter.pages);
 const READ_KEY = 'niannian-read-chapters';
+const AUTOPLAY_KEY = 'niannian-autoplay';
 let chapterIndex = 0;
 let pageIndex = 0;
 let playing = false;
 let busy = false;
 let lastCard = null;
+let autoTimer = null;
 const player = new RecordedPlayer({
 pages: allPages,
 AudioClass: window.Audio,
 idleMessage: bookMeta.idle_message,
+shared: true,
 onState({ state, message }) {
 playing = state === 'playing' || state === 'starting';
 elements.status.textContent = message;
@@ -416,6 +449,12 @@ return node;
 }
 function readSet() {
 try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); } catch { return new Set(); }
+}
+function autoplayEnabled() {
+try { return localStorage.getItem(AUTOPLAY_KEY) !== '0'; } catch { return true; }
+}
+function saveAutoplay(on) {
+try { localStorage.setItem(AUTOPLAY_KEY, on ? '1' : '0'); } catch { /* not remembered on this device */ }
 }
 function markRead(id) {
 try {
@@ -483,6 +522,7 @@ return fly;
 async function openChapter(index, card) {
 if (busy) return;
 busy = true;
+player.unlock();
 lastCard = card;
 chapterIndex = index;
 pageIndex = 0;
@@ -527,11 +567,12 @@ elements['reader-view'].classList.remove('is-entering');
 void elements['reader-view'].offsetWidth;
 elements['reader-view'].classList.add('is-entering');
 window.scrollTo(0, 0);
-renderPage();
+renderPage(reduceMotion() ? 150 : 550);
 elements.sentence.focus({ preventScroll: true });
 }
 function closeReader() {
 if (busy) return;
+cancelAutoRead();
 player.stop();
 const chapter = bookChapters[chapterIndex];
 if (pageIndex === chapter.pages.length - 1) markRead(chapter.id);
@@ -542,7 +583,8 @@ window.scrollTo(0, 0);
 const again = elements.shelf.querySelector(`[data-index="${chapterIndex}"]`);
 if (again) again.focus({ preventScroll: true });
 }
-function renderPage() {
+function renderPage(autoDelay = 380) {
+cancelAutoRead();
 player.stop();
 const chapter = bookChapters[chapterIndex];
 const page = chapter.pages[pageIndex];
@@ -566,10 +608,26 @@ elements.next.setAttribute('aria-label', last ? '读完了，回到书架' : '�
 elements['page-count'].textContent = `第 ${pageIndex + 1} 页 / 共 ${chapter.pages.length} 页`;
 elements.progress.style.width = `${((pageIndex + 1) / chapter.pages.length) * 100}%`;
 if (last) markRead(chapter.id);
+scheduleAutoRead(autoDelay);
 }
-function read(rate = 0.85) {
+function read(rate = 0.85, auto = false) {
 const page = bookChapters[chapterIndex].pages[pageIndex];
-player.read(page.sentence, { rate, voiceURI: elements.voice.value || 'ana' });
+player.read(page.sentence, { rate, voiceURI: elements.voice.value || 'ana', auto });
+}
+function cancelAutoRead() {
+clearTimeout(autoTimer);
+autoTimer = null;
+}
+function scheduleAutoRead(delay) {
+cancelAutoRead();
+if (!elements.autoplay.checked || document.hidden) return;
+const shownPage = pageIndex;
+const shownChapter = chapterIndex;
+autoTimer = setTimeout(() => {
+autoTimer = null;
+if (elements['reader-view'].hidden || shownPage !== pageIndex || shownChapter !== chapterIndex) return;
+read(0.85, true);
+}, delay);
 }
 function turn(direction) {
 const chapter = bookChapters[chapterIndex];
@@ -585,10 +643,15 @@ renderPage();
 function setupVoices() {
 elements.voice.replaceChildren(...player.availableVoices().map(voice => new Option(voice.name, voice.voiceURI)));
 }
-elements.play.addEventListener('click', () => (playing ? player.stop() : read()));
-elements.slow.addEventListener('click', () => read(0.65));
-elements.sentence.addEventListener('click', () => read());
-elements['art-play'].addEventListener('click', () => read());
+elements.play.addEventListener('click', () => { cancelAutoRead(); playing ? player.stop() : read(); });
+elements.slow.addEventListener('click', () => { cancelAutoRead(); read(0.65); });
+elements.sentence.addEventListener('click', () => { cancelAutoRead(); read(); });
+elements['art-play'].addEventListener('click', () => { cancelAutoRead(); read(); });
+elements.autoplay.addEventListener('change', () => {
+saveAutoplay(elements.autoplay.checked);
+if (elements.autoplay.checked) scheduleAutoRead(200);
+else cancelAutoRead();
+});
 elements.previous.addEventListener('click', () => turn(-1));
 elements.next.addEventListener('click', () => turn(1));
 elements.back.addEventListener('click', closeReader);
@@ -604,11 +667,13 @@ turn(event.key === 'ArrowRight' ? 1 : -1);
 closeReader();
 } else if (event.key === ' ' && !event.target.closest('button')) {
 event.preventDefault();
+cancelAutoRead();
 playing ? player.stop() : read();
 }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) player.stop(); });
-window.addEventListener('pagehide', () => player.stop());
+document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAutoRead(); player.stop(); } });
+window.addEventListener('pagehide', () => { cancelAutoRead(); player.stop(); });
+elements.autoplay.checked = autoplayEnabled();
 setupVoices();
 renderShelf();</script>
 </body>
